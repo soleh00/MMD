@@ -11,6 +11,7 @@
 #include <omp.h>
 #include <iomanip>
 #include "vec3.h"
+#include <vector>
 
 using namespace std;
 
@@ -65,13 +66,13 @@ Vec3 Verle_V (Vec3 dr, double dt)
 class physical_system
 {
     double L_FREE_MOTION; //для проверки что r(t + dt) - r(t) не слишком велико
-    const int N = 5; //количество частиц
+    const unsigned long N = 4; //количество частиц
     const double Lx = 800, Ly = 800, Lz = 800; //размер ячейки в 10е-11 м
     const double dt = 0.001; //время 1 молекулярного-шага в 10е-12 сек
     const double T0 = 1.38 * 110; //начальная температура
     bool v0_rand = true; //наличие начальных скоростей у частиц
     bool isInitialised = false; //инициализирована система
-    Vec3 * r; //соординаты всех частиц
+    vector<Vec3> r; //соординаты всех частиц
     Vec3 * dr; //расстояния от предыдущих координат системы до текущих
     Vec3 * v; //скорости всех частиц
     Vec3 * f; //силы действующие на частицу со стороны остальных частиц
@@ -102,7 +103,7 @@ public:
         dr = new Vec3[N];
         v = new Vec3[N];
         f = new Vec3[N];
-        r = new Vec3[N];
+        r.resize(N, Vec3(0.0, 0.0, 0.0));
         m = new double[N];
         time = 0.0;
         energy = 0.0;
@@ -122,7 +123,7 @@ public:
         delete [] v;
         delete [] f;
         delete [] m;
-        delete [] r;
+        r.clear();
         out.close();
         term_out.close();
         force_out.close();
@@ -141,7 +142,7 @@ public:
         }
     }
 
-    void print_to_file(int i)
+    void print_to_file(unsigned long i)
     {
         /*
          * запись в файл информации об iтой частице
@@ -162,11 +163,11 @@ public:
     void initialize()
     {
         srand(static_cast<unsigned int>(std::time(nullptr)));
-        int K = static_cast<int>(ceil(pow(N, 1.0/3)));
+        unsigned long K = static_cast<unsigned long>(ceil(pow(N, 1.0/3)));
         double dLx = Lx / (K);
         double dLy = Ly / (K);
         double dLz = Lz / (K);
-        int counter = 0;
+        unsigned long counter = 0;
         new_frame();
         cout << "Number of particles N: " << N << endl;
         cout << "Box size: Lx = " << Lx << " Ly = " << Ly << " Lz = " << Lz << endl;
@@ -176,7 +177,7 @@ public:
             /*
              * Если мы хотим чтобы были начальный скорости у частиц
              */
-            for(int i = 0; i < N; ++i)
+            for(unsigned long i = 0; i < N; ++i)
             {
                 v[i] = Vec3((rand() % 10000 - 5000) / 10000.0,
                             (rand() % 10000 - 5000) / 10000.0,
@@ -185,7 +186,7 @@ public:
             }
             calc_stats();
             cout << "init T = " << T << endl;
-            for(int i = 0; i < N; ++i)
+            for(unsigned long i = 0; i < N; ++i)
             {
                 /*
                  * масштабирование скоростей
@@ -197,7 +198,7 @@ public:
 
             calc_P();
 
-            for(int i = 0; i < N; ++i)
+            for(unsigned long i = 0; i < N; ++i)
             {
                 /*
                  * вычтем скорость центра масс системы чтобы она покоилась
@@ -207,7 +208,7 @@ public:
         }
         else
         {
-            for(int i = 0; i < N; ++i)
+            for(unsigned long i = 0; i < N; ++i)
             {
                 /*
                  * если мы хотим чтобы частицы покоились
@@ -216,9 +217,9 @@ public:
                 m[i] = 1;
             }
         }
-        for(int i = 0; i < K; ++i)
-            for(int j = 0; j < K; ++j)
-                for(int k = 0; k < K; ++k)
+        for(unsigned long i = 0; i < K; ++i)
+            for(unsigned long j = 0; j < K; ++j)
+                for(unsigned long k = 0; k < K; ++k)
                     if(counter < N)
                     {
                         r[counter].set((i + 1.0/2) * dLx, (j + 1.0/2) * dLy, (k + 1.0/2) * dLz);
@@ -266,7 +267,7 @@ public:
         Psys = Vec3(0.0, 0.0, 0.0);
         if(msys == 0.0)
         {
-            for(int i = 0; i < N; ++i)
+            for(unsigned long i = 0; i < N; ++i)
             {
                 Psys += v[i] * m[i];
                 msys += m[i];
@@ -274,7 +275,7 @@ public:
         }
         else
         {
-            for(int i = 0; i < N; ++i)
+            for(unsigned long i = 0; i < N; ++i)
                 Psys += v[i]*m[i];
         }
     }
@@ -353,10 +354,10 @@ public:
     {
         double ff, _rij;
 //#pragma omp parallel for private(ff, _rij)
-        for(int i = 0; i < N; ++i)
+        for(unsigned long i = 0; i < N; ++i)
         {
             f[i] = Vec3(0.0, 0.0, 0.0);
-            for(int j = 0; j < N; ++j)
+            for(unsigned long j = 0; j < N; ++j)
             {
                 if(i != j)
                 {
@@ -388,7 +389,7 @@ public:
         time += dt;
         new_frame();
 //#pragma omp parallel for private(rBuf)
-        for(int i = 0; i < N; ++i)
+        for(unsigned long i = 0; i < N; ++i)
         {
             rBuf = r[i];
             /*
@@ -414,7 +415,7 @@ public:
             PBC(r[i], Lx, Ly, Lz);
         }
 
-        for(int i = 0; i < N; ++i)
+        for(unsigned long i = 0; i < N; ++i)
         {
             print_to_file(i);
         }
@@ -433,17 +434,17 @@ public:
         double kinEnergy = 0.0;
         double potEnergy = 0.0;
         double E = 0.0;
-        const double cor_ratio = sqrt(3 * M_PI / 8);
+        //const double cor_ratio = sqrt(3 * M_PI / 8);
         double ratio = 0;
 //#pragma omp parallel for reduction (+ : avgV, sqrAvgV, kinEnergy, potEnergy)
-        for (int i = 0; i < N; ++ i)
+        for (unsigned long i = 0; i < N; ++ i)
         {
             if(isInitialised)
             {
                 avgV += v[i].abs();
                 sqrAvgV += v[i].abs2();
                 kinEnergy += m[i] * v[i].abs2() / 2;
-                for(int j = 0; j < N; ++j)
+                for(unsigned long j = 0; j < N; ++j)
                 {
                     if(i != j)
                     {
@@ -499,7 +500,7 @@ public:
         memset(v_list, 0, sizeof (int) * intervals);
         double tmp_v;
 
-        for(int i = 0; i < N; ++i)
+        for(unsigned long i = 0; i < N; ++i)
         {
             tmp_v = v[i].abs();
             if(max_v < tmp_v)
@@ -512,7 +513,7 @@ public:
         int max_group_prob = 0;
         int _2_nd_max_group = 0;
         int _2_nd_max_group_prob = 0;
-        for(int i = 0; i < N; ++i)
+        for(unsigned long i = 0; i < N; ++i)
         {
             tmp_v = v[i].abs();
             int group_no = static_cast<int>(floor(tmp_v / delta));
@@ -553,7 +554,7 @@ public:
         cout << "avg_v = " << averV << endl;
         calc_P();
         cout << "Mass center impulse = " << Psys.abs() << endl;
-        for(int i = 0; i < N; ++i)
+        for(unsigned long i = 0; i < N; ++i)
         {
             v[i] -= Psys * (1/msys);
         }
