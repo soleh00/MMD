@@ -25,13 +25,13 @@ typedef Vec3 (*alg_R)(Vec3, Vec3, Vec3, double, double);
 
 const double eps = 1;
 const double sigma = 1;
-const double rcut = 2.5 * sigma;
+//const double rcut = 2.5 * sigma;
 const double rmin = 0.00001;
 
 double force_LD(double r)
 {
-    if(r > rcut)
-        return 0;
+//    if(r > rcut)
+//        return 0;
 
     if(r < rmin)
         return force_LD(rmin);
@@ -42,8 +42,8 @@ double force_LD(double r)
 
 double potential_LD(double r)
 {
-    if(r > rcut)
-        return 0;
+//    if(r > rcut)
+//        return 0;
 
     if(r < rmin)
         return potential_LD(rmin);
@@ -66,7 +66,7 @@ Vec3 Verle_V (Vec3 dr, double dt)
 class physical_system
 {
     double L_FREE_MOTION; //для проверки что r(t + dt) - r(t) не слишком велико
-    const unsigned long N = 4; //количество частиц
+    const unsigned long N = 50; //количество частиц
     const double Lx = 800, Ly = 800, Lz = 800; //размер ячейки в 10е-11 м
     const double dt = 0.001; //время 1 молекулярного-шага в 10е-12 сек
     const double T0 = 1.38 * 110; //начальная температура
@@ -326,8 +326,8 @@ public:
         double aDz = 0.0;
 
         dist.setX(correctCoord(dist.getX(), aDx, Dx));
-        dist.setX(correctCoord(dist.getY(), aDy, Dy));
-        dist.setX(correctCoord(dist.getZ(), aDz, Dz));
+        dist.setY(correctCoord(dist.getY(), aDy, Dy));
+        dist.setZ(correctCoord(dist.getZ(), aDz, Dz));
     }
 
     double correctCoord(double coord, double leftBounadary, double rightBoundary) const
